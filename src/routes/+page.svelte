@@ -3,6 +3,7 @@
     import uploadFileIcon from '$lib/assets/icons/uploadFile.svg';
     import redrawIcon from '$lib/assets/icons/refresh.svg';
     import downloadIcon from '$lib/assets/icons/download.svg';
+    import fileDownloadIcon from '$lib/assets/icons/fileDownload.svg';
 
     let mediaSize = $state([1920, 1080]);
     
@@ -23,7 +24,7 @@
     let darkerColor = $state(presetColors[2].darker);
     let lighterColor = $state(presetColors[2].lighter);
     let asciiColor = $state(presetColors[3].ascii);
-    let colors = $derived({background: backgroundColor, darker: darkerColor, lighter: lighterColor, ascii: asciiColor });
+    let colors = $derived({background: backgroundColor, darker: darkerColor, lighter: lighterColor, ascii: asciiColor});
 
     let pixelPreset = $state();
     let asciiPreset = $state();
@@ -45,7 +46,7 @@
     let asciiSteps = $derived([asciiStep1, asciiStep2]);
     let clusterCount = $state(20);
     let activeLayers = $state({ pixel: true, cluster: true, ascii: true, background: false });
-    let frame = $state(0);
+    let frame = $state(1);
 
     let asciiMode = $state();
 
@@ -313,9 +314,22 @@
     <button id="redraw" onclick={() => update.redraw = true}>
         <img src={redrawIcon} alt="Redraw"/> redraw
     </button>
-    <div id="videoPlayback"></div>
-    <div id="saveSection">
-        <button id="saveCanvas" onclick={() => save.canvas = true}>download</button>
+    <div id="videoPlayback" class="flexRow">
+        <p>{frame}</p>
+        <input type="range" min="0" max="123" bind:value={frame} />
+        <p>123</p>
+    </div>
+    <div id="saveSection" class="flexRowSpaceBetween">
+        <div class="flexRow">
+            <p>canvas.</p>
+            <select>
+                <option value="png">png</option>
+                <option value="jpg">jpg</option>
+            </select>
+        </div>
+        <button id="saveCanvas" class="iconButton" onclick={() => save.canvas = true}>
+            <img src={fileDownloadIcon} alt="Download"/>
+        </button>
     </div>
 </footer>
 
@@ -409,10 +423,31 @@ h2{
     height: 100%;
 }
 
-#footer > button{
-    width: calc(30% + 1px);
+#footer > #redraw{
+    min-width: calc(30% + 0.5px);
+    width: calc(30% + 0.5px);
     border: none;
     border-right: 1px solid var(--white2);
+}
+
+#footer > #videoPlayback{
+    width: 100%;
+    border-right: 1px solid var(--white2);
+    padding:0em 2em;
+}
+
+#footer > #videoPlayback input{
+    width: 100%;
+}
+
+#footer > #saveSection{
+    padding-right: 2em;
+    padding-left: 2em;
+    gap:2em;
+}
+
+#footer > #saveSection select {
+    padding: 0.35em 0.8em;
 }
 
 img{

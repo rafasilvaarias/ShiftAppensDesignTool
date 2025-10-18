@@ -60,7 +60,7 @@ function calculateIndexes(p5, grayScaleValue, colorIndex, iX, iY, settings, offX
   } else if (settings.asciiMode === "perlin") {
     symbolIndex = Math.floor(
       p5.map(
-        p5.constrain(p5.noise(iX * 0.1 + offX, iY * 0.1 + offY, settings.frame), 0.15, 0.85)
+        p5.constrain(p5.noise(iX * 0.1 + offX, iY * 0.1 + offY, settings.frame * 0.1), 0.15, 0.85)
       , 0.15, 0.85, 0, settings.textSymbols.length));
   }
   
