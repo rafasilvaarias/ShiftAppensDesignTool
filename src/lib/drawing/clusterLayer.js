@@ -256,6 +256,7 @@ export function drawClusterLayer(p5, layers, pixel, xGrid, yGrid, colors, settin
     }
   }
 
+  console.log(`Clusters drawn: ${clustersFound}`);
   settings.clustersCount = clustersFound;
   return roughCanvas;
 }

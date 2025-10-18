@@ -11,13 +11,8 @@
   } from '../lib/drawing/index.js';
 
 let {
-  colors,
-  imagePath,
   save = $bindable(),
   update = $bindable(),
-  updateColorSteps = $bindable(),
-  updateTextSymbols = $bindable(),
-  redraw = $bindable(),
   settings
 } = $props();
 
@@ -45,15 +40,15 @@ let sketch = {
     // Initialize Rough.js canvas for clusters layer
     rc = rough.canvas(layers.clusters.canvas);
     
-    // Load image and handle both local files and static assets
+    // Load media and handle both local files and static assets
     img = p5.loadImage(
-      imagePath,
+      settings.mediaPath,
       () => {
         processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
         imageLoaded = true;
       },
       (err) => {
-        console.error("Failed to load image:", err);
+        console.error("Failed to load media:", err);
         imageLoaded = false;
       }
     );
@@ -62,45 +57,85 @@ let sketch = {
   draw: p5 => {
     if (!imageLoaded) return;
     
-    if(save===true){
-      let filename = imagePath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_.png';
+    // Saving
+
+    if(save.canvas===true){
+      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_.png';
       p5.save(filename);
-      save=false;
+      save.canvas=false;
     }
-    
-    if(updateColorSteps===true){
-      changeColorIndexes(p5, pixel, xGrid, yGrid, settings);
-      updateColorSteps=false;
+
+    if(save.pixelLayer===true){
+      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_PIXEL_LAYER_.png';
+      layers.pixel.save(filename);
+      save.pixelLayer=false;
     }
-    
-    if(updateTextSymbols===true){
-      changeSymbolIndexes(p5, pixel, xGrid, yGrid, settings);
-      updateTextSymbols=false;
+
+    if(save.clusterLayer===true){
+      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_CLUSTER_LAYER_.png';
+      layers.clusters.save(filename);
+      save.clusterLayer=false;
     }
-    
-    if(redraw===true){
+
+    if(save.asciiLayer===true){
+      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_ASCII_LAYER_.png';
+      layers.ascii.save(filename);
+      save.asciiLayer=false;
+    }
+
+    // Updating
+
+    if(update.redraw===true){
       offX = Math.random() * 30000;
       offY = Math.random() * 30000;
       processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
-      update=true;
-      redraw=false;
+      update.layers = true;
+      update.redraw = false;
     }
     
-    if(update===true){
+    if(update.media === true){
+      processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
+      update.media = false;
+      update.layers = true;
+    }
+    
+    if(update.colorSteps === true){
+      changeColorIndexes(p5, pixel, xGrid, yGrid, settings);
+      update.colorSteps = false;
+      update.layers = true;
+    }
+    
+    if(update.textSymbols === true){
+      changeSymbolIndexes(p5, pixel, xGrid, yGrid, settings, offX, offY);
+      update.textSymbols = false;
+      update.layers = true;
+    }
+    
+    if(update.layers === true){
       p5.clear();
       console.log('update p5');
+
+      if(settings.activeLayers.background){
+        p5.background(settings.colors.background);
+      }
       
-      drawPixelLayer(p5, layers, pixel, xGrid, yGrid, colors, settings);
-      p5.image(layers.pixel, 0, 0);
       
-      // Pass rc (rough canvas) to drawClusterLayer
-      drawClusterLayer(p5, layers, pixel, xGrid, yGrid, colors, settings, offX, offY, rc);
-      p5.image(layers.clusters, 0, 0);
+      drawPixelLayer(p5, layers, pixel, xGrid, yGrid, settings.colors, settings);
+      if(settings.activeLayers.pixel){
+        p5.image(layers.pixel, 0, 0);
+      }
       
-      drawAsciiLayer(p5, layers, pixel, xGrid, yGrid, colors, settings);
-      p5.image(layers.ascii, 0, 0);
+      if(settings.activeLayers.cluster){
+        drawClusterLayer(p5, layers, pixel, xGrid, yGrid, settings.colors, settings, offX, offY, rc);
+        p5.image(layers.clusters, 0, 0);
+      }
       
-      update=false;
+      if(settings.activeLayers.ascii){
+        drawAsciiLayer(p5, layers, pixel, xGrid, yGrid, settings.colors, settings);
+        p5.image(layers.ascii, 0, 0);
+      }
+      
+      update.layers = false;
     }
   }
 };
@@ -122,13 +157,10 @@ let sketch = {
 .p5-container :global(canvas) {
   transform-origin: center center;
   max-width: none !important;
-  max-height: calc(100svh - 30px) !important;
+  max-height: calc(100svh - 4em) !important;
   width: calc(100%) !important;
   height: 100% !important;
-  scale: min(
-    calc(100vw * 0.7 / 1920px),
-    calc((100svh - 50px) / 1080px)
-  );
+
   border-radius: 0.25em;
 }
 </style>
