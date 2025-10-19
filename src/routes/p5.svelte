@@ -73,26 +73,22 @@ let sketch = {
     // Saving
 
     if(save.canvas===true){
-      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_.png';
-      p5.save(filename);
+      p5.save("canvas_"+settings.frameCount+"."+settings.exportFormat);
       save.canvas=false;
     }
 
     if(save.pixelLayer===true){
-      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_PIXEL_LAYER_.png';
-      layers.pixel.save(filename);
+      layers.pixel.save("pixelLayer_"+settings.frameCount+"."+settings.exportFormat);
       save.pixelLayer=false;
     }
 
     if(save.clusterLayer===true){
-      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_CLUSTER_LAYER_.png';
-      layers.clusters.save(filename);
+      layers.clusters.save("clusterLayer_"+settings.frameCount+"."+settings.exportFormat);
       save.clusterLayer=false;
     }
 
     if(save.asciiLayer===true){
-      let filename = settings.mediaPath.replace(/\.(jpg|JPG|png)$/i, '') + '_' + settings.gridSize + 'GRID_ASCII_LAYER_.png';
-      layers.ascii.save(filename);
+      layers.ascii.save("asciiLayer_"+settings.frameCount+"."+settings.exportFormat);
       save.asciiLayer=false;
     }
 

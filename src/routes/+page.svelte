@@ -61,7 +61,9 @@
 
     let asciiMode = $state();
 
-    let settings = $derived({gridSize, colorSteps, minColorValue, maxColorValue, textSymbols, canvasWidth, canvasHeight, asciiOffset, blurValue, asciiSteps, clusterCount, mediaPath: currentFrameUrl, colors, activeLayers: {...activeLayers}, asciiMode, currentFrame});
+    let exportFormat = $state("png");
+
+    let settings = $derived({gridSize, colorSteps, minColorValue, maxColorValue, textSymbols, canvasWidth, canvasHeight, asciiOffset, blurValue, asciiSteps, clusterCount, mediaPath: currentFrameUrl, colors, activeLayers: {...activeLayers}, asciiMode, currentFrame, exportFormat});
 
     let save = $state({
         canvas: false,
@@ -162,6 +164,7 @@
                     
                     // Only increment reloadCount after image is fully loaded
                     reloadCount++;
+                    update.layers = true;
                 };
                 img.src = uploadedMediaUrl;
             };
@@ -422,7 +425,7 @@
     <div id="videoPlayback" class="flexRow">
         {#if isVideo}
             <p>{currentFrame + 1}</p>
-            <input disabled type="range" min="0" max={totalVideoFrames - 1} bind:value={currentFrame} />
+            <input type="range" min="0" max={totalVideoFrames - 1} bind:value={currentFrame} />
             <p>{totalVideoFrames}</p>
         {:else}
             <p class="disabled-text">No video loaded</p>
@@ -431,14 +434,21 @@
     <div id="saveSection" class="flexRowSpaceBetween">
         <div class="flexRow">
             <p>canvas.</p>
-            <select>
+            <select bind:value={exportFormat}>
                 <option value="png">png</option>
                 <option value="jpg">jpg</option>
             </select>
         </div>
-        <button id="saveCanvas" class="iconButton" onclick={() => save.canvas = true}>
-            <img src={fileDownloadIcon} alt="Download"/>
-        </button>
+        <div class="flexRow"> 
+            <button id="saveCanvas" class="iconButton" onclick={() => save.canvas = true}>
+                <img src={fileDownloadIcon} alt="Download"/>
+            </button>
+            {#if isVideo}
+                <button id="saveVideo" class="iconButton" onclick={saveVideo()}>
+                    <img src={fileDownloadIcon} alt="Download"/>
+                </button>
+            {/if}
+        </div>
     </div>
 </footer>
 
