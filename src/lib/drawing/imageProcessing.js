@@ -42,6 +42,41 @@ export function processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY)
   }
 }
 
+export function changeImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY) {
+  console.log('change image');
+  img.resize(settings.canvasWidth, settings.canvasHeight);
+
+  for (let iX = 0; iX < xGrid; iX++) {
+    for (let iY = 0; iY <= yGrid; iY++) {
+
+      // Get the color of the center pixel in the grid cell
+      let x = iX * settings.gridSize;
+      let y = iY * settings.gridSize;
+      let c = img.get(x + Math.floor(settings.gridSize / 2), y + Math.floor(settings.gridSize / 2));
+
+      if (p5.alpha(c) > 0 || p5.blue(c) + p5.green(c) + p5.red(c) > 0) {
+        // Symbol and Color Index
+        let grayScaleValue = Math.round((p5.red(c) + p5.green(c) + p5.blue(c)) / 3);
+        let indexes = calculateIndexes(p5, grayScaleValue, 0, iX, iY, settings, offX, offY);
+        let colorIndex = indexes.colorIndex;
+        let symbolIndex = indexes.symbolIndex;
+
+        pixel[iX][iY] = {
+          colorIndex: colorIndex,
+          symbolIndex: symbolIndex,
+          grayScaleValue: grayScaleValue,
+          perlinValue: pixel[iX][iY].perlinValue,
+          asciiOffset: pixel[iX][iY].asciiOffset
+        };
+
+      } else {
+        pixel[iX][iY] = null;
+      }
+
+    }
+  }
+}
+
 /**
  * Calculate color and symbol indexes for a single pixel
  * This is the central function that handles the mapping logic
@@ -60,7 +95,7 @@ function calculateIndexes(p5, grayScaleValue, colorIndex, iX, iY, settings, offX
   } else if (settings.asciiMode === "perlin") {
     symbolIndex = Math.floor(
       p5.map(
-        p5.constrain(p5.noise(iX * 0.1 + offX, iY * 0.1 + offY, settings.frame * 0.1), 0.15, 0.85)
+        p5.constrain(p5.noise(iX * 0.1 + offX, iY * 0.1 + offY, settings.currentFrame * 0.025), 0.15, 0.85)
       , 0.15, 0.85, 0, settings.textSymbols.length));
   }
   
@@ -81,6 +116,7 @@ export function changeColorIndexes(p5, pixel, xGrid, yGrid, settings) {
 }
 
 export function changeSymbolIndexes(p5, pixel, xGrid, yGrid, settings, offX, offY) {
+  console.log('currentFrame' + settings.currentFrame);
   for (let iX = 0; iX < xGrid; iX++) {
     for (let iY = 0; iY <= yGrid; iY++) {
       if (pixel[iX][iY]) {

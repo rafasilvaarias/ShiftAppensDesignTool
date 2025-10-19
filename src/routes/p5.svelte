@@ -1,8 +1,9 @@
 <script>
   import P5 from "@macfja/svelte-p5"
-  import rough from 'roughjs'; // Add this import
+  import rough from 'roughjs';
   import {
     processImage,
+    changeImage,
     changeColorIndexes,
     changeSymbolIndexes,
     drawPixelLayer,
@@ -18,8 +19,9 @@ let {
 
 ///////////////////////////////
 let img;
+let p5Instance; // Store p5 instance
 let layers = {};
-let rc; // Add rough canvas instance
+let rc;
 let xGrid = Math.floor(settings.canvasWidth / settings.gridSize);
 let yGrid = Math.floor(settings.canvasHeight / settings.gridSize);
 let offX = Math.random() * 30000;
@@ -27,8 +29,25 @@ let offY = Math.random() * 30000;
 let pixel = Array.from({ length: xGrid }, () => new Array(yGrid + 1));
 let imageLoaded = false;
 
+// Function to load/reload image
+function loadMediaImage(p5, callback) {
+  imageLoaded = false;
+  img = p5.loadImage(
+    settings.mediaPath,
+    () => {
+      if (callback) callback();
+      imageLoaded = true;
+    },
+    (err) => {
+      console.error("Failed to load media:", err);
+      imageLoaded = false;
+    }
+  );
+}
+
 let sketch = {
   setup: p5 => {
+    p5Instance = p5; // Store reference
     p5.createCanvas(settings.canvasWidth, settings.canvasHeight);
     p5.background(0,0,0,0);
     
@@ -40,18 +59,12 @@ let sketch = {
     // Initialize Rough.js canvas for clusters layer
     rc = rough.canvas(layers.clusters.canvas);
     
-    // Load media and handle both local files and static assets
-    img = p5.loadImage(
-      settings.mediaPath,
-      () => {
+    // Load initial image
+    if (settings.mediaPath) {
+      loadMediaImage(p5, () => {
         processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
-        imageLoaded = true;
-      },
-      (err) => {
-        console.error("Failed to load media:", err);
-        imageLoaded = false;
-      }
-    );
+      });
+    }
   },
   
   draw: p5 => {
@@ -94,9 +107,12 @@ let sketch = {
     }
     
     if(update.media === true){
-      processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
+      // Reload the image from the new frame URL
+      loadMediaImage(p5, () => {
+        changeImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY);
+        update.layers = true;
+      });
       update.media = false;
-      update.layers = true;
     }
     
     if(update.colorSteps === true){

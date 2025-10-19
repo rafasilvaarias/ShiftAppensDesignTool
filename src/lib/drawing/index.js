@@ -4,7 +4,7 @@
  */
 
 // Image processing functions
-export { processImage, changeColorIndexes, changeSymbolIndexes } from './imageProcessing.js';
+export { processImage, changeImage, changeColorIndexes, changeSymbolIndexes } from './imageProcessing.js';
 
 // Layer drawing functions
 export { drawPixelLayer } from './pixelLayer.js';

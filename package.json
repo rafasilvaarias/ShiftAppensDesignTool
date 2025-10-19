@@ -17,6 +17,8 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"@ffmpeg/ffmpeg": "^0.12.15",
+		"@ffmpeg/util": "^0.12.2",
 		"@macfja/svelte-p5": "^1.2.0",
 		"roughjs": "^4.6.6"
 	}

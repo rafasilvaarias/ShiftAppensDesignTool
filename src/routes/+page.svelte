@@ -4,6 +4,9 @@
     import redrawIcon from '$lib/assets/icons/refresh.svg';
     import downloadIcon from '$lib/assets/icons/download.svg';
     import fileDownloadIcon from '$lib/assets/icons/fileDownload.svg';
+    import { videoProcessor } from '$lib/videoProcessor.js';
+
+    let reloadCount = $state(0);
 
     let mediaSize = $state([1920, 1080]);
     
@@ -11,6 +14,15 @@
     let uploadedMediaFile = $state(null);
     let uploadedMediaUrl = $state(null);
     let currentMediaPath = $derived(uploadedMediaUrl);
+    
+    // Video processing variables
+    let isVideo = $state(false);
+    let videoFrames = $state([]);
+    let totalVideoFrames = $state(0);
+    let isProcessingVideo = $state(false);
+    let videoProcessingProgress = $state(0);
+    let currentFrame = $state(0);
+    let currentFrameUrl = $derived(isVideo && videoFrames.length > 0 ? videoFrames[currentFrame] : uploadedMediaUrl);
 
     let presetColors = [
         { darker: "#10400C", lighter: "#478530", ascii: "#9DD492", name: "Green" },
@@ -46,11 +58,10 @@
     let asciiSteps = $derived([asciiStep1, asciiStep2]);
     let clusterCount = $state(20);
     let activeLayers = $state({ pixel: true, cluster: true, ascii: true, background: false });
-    let frame = $state(1);
 
     let asciiMode = $state();
 
-    let settings = $derived({gridSize, colorSteps, minColorValue, maxColorValue, textSymbols, canvasWidth, canvasHeight, asciiOffset, blurValue, asciiSteps, clusterCount, mediaPath: currentMediaPath, colors, activeLayers: {...activeLayers}, asciiMode, frame});
+    let settings = $derived({gridSize, colorSteps, minColorValue, maxColorValue, textSymbols, canvasWidth, canvasHeight, asciiOffset, blurValue, asciiSteps, clusterCount, mediaPath: currentFrameUrl, colors, activeLayers: {...activeLayers}, asciiMode, currentFrame});
 
     let save = $state({
         canvas: false,
@@ -70,7 +81,7 @@
     $effect(() => {
         colors;
         settings;
-        currentMediaPath;
+        currentFrameUrl;
 
 
         return() => {
@@ -116,12 +127,27 @@
     }
 
     // Media upload handler
-    function handleMediaUpload(event) {
+    async function handleMediaUpload(event) {
         const file = event.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-            if (uploadedMediaUrl) {
-                URL.revokeObjectURL(uploadedMediaUrl);
-            }
+        if (!file) return;
+
+        // Clean up previous media
+        if (uploadedMediaUrl && !isVideo) {
+            URL.revokeObjectURL(uploadedMediaUrl);
+        }
+        if (isVideo) {
+            videoProcessor.cleanup();
+            videoFrames = [];
+        }
+
+        const isVideoFile = file.type.startsWith('video/');
+        const isImageFile = file.type.startsWith('image/');
+
+        if (isImageFile) {
+            // Handle image upload
+            isVideo = false;
+            totalVideoFrames = 0;
+            currentFrame = 0;
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -131,14 +157,87 @@
                 const img = new Image();
                 img.onload = function() {
                     mediaSize = [img.width, img.height];
+                    mediaSize[0] = Math.round(mediaSize[0] / 20) * 20;
+                    mediaSize[1] = Math.round(mediaSize[1] / 20) * 20;
+                    
+                    // Only increment reloadCount after image is fully loaded
+                    reloadCount++;
                 };
-                mediaSize[0] = Math.round(mediaSize[0] / 20) * 20;
-                mediaSize[1] = Math.round(mediaSize[1] / 20) * 20;
                 img.src = uploadedMediaUrl;
             };
             reader.readAsDataURL(file);
+        } else if (isVideoFile) {
+            // Handle video upload
+            isVideo = true;
+            isProcessingVideo = true;
+            videoProcessingProgress = 0;
+
+            try {
+                // First, get video dimensions
+                const videoUrl = URL.createObjectURL(file);
+                const video = document.createElement('video');
+                
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = () => {
+                        mediaSize = [video.videoWidth, video.videoHeight];
+                        mediaSize[0] = Math.round(mediaSize[0] / 20) * 20;
+                        mediaSize[1] = Math.round(mediaSize[1] / 20) * 20;
+                        resolve();
+                    };
+                    video.onerror = reject;
+                    video.src = videoUrl;
+                });
+
+                URL.revokeObjectURL(videoUrl);
+
+                // Process video into frames
+                const result = await videoProcessor.processVideo(
+                    file,
+                    mediaSize[0],
+                    mediaSize[1],
+                    (current, total) => {
+                        videoProcessingProgress = Math.round((current / total) * 100);
+                    }
+                );
+
+                videoFrames = result.frameUrls;
+                totalVideoFrames = result.totalFrames;
+                currentFrame = 0;
+                uploadedMediaUrl = videoFrames[0];
+                
+                // Only increment reloadCount after video is fully processed
+                reloadCount++;
+                
+            } catch (error) {
+                console.error('Error processing video:', error);
+                alert('Failed to process video. Please try again.');
+                isVideo = false;
+            } finally {
+                isProcessingVideo = false;
+            }
         }
     }
+
+    $effect(() => {
+        gridSize;
+    return() => {
+            reloadCount++;
+        }
+    });
+
+    // Update current frame when frame slider changes
+    $effect(() => {
+        if (isVideo && videoFrames.length > 0) {
+            uploadedMediaUrl = videoFrames[currentFrame];
+        }
+    });
+
+    $effect(() => {
+        currentFrame;
+        return() => {
+            update.media = true;
+        }
+    });
 
 </script>
 
@@ -147,10 +246,16 @@
     <div id="sidebar">
         <div id="settings">
             <div id="upload-container">
-                <input type="file" id="mediaFileInput" accept="image/*" onchange={handleMediaUpload} style="display: none;" />
+                <input type="file" id="mediaFileInput" accept="image/*,video/*" onchange={handleMediaUpload} style="display: none;" />
                 <button type="button" class={uploadedMediaUrl ? '' : 'blinkingStroke'} onclick={() => document.getElementById('mediaFileInput').click()}>
                     <img src={uploadFileIcon} alt="Upload Icon"/> upload new image/video file
                 </button>
+                {#if isProcessingVideo}
+                    <div class="processing-status">
+                        <p>Processing video... {videoProcessingProgress}%</p>
+                        <progress value={videoProcessingProgress} max="100"></progress>
+                    </div>
+                {/if}
             </div>
             {#if uploadedMediaUrl}
                 
@@ -302,7 +407,7 @@
     <!-- Display Image-->
     <div id="display">
         {#if canvasWidth % 20 == 0 && canvasHeight % 20 == 0}
-            {#key `${currentMediaPath}-${settings.canvasHeight}-${settings.canvasWidth}-${settings.gridSize}` }
+            {#key `${reloadCount}`}
                 <P5 bind:save bind:update {settings} />
             {/key}
         {:else}
@@ -315,9 +420,13 @@
         <img src={redrawIcon} alt="Redraw"/> redraw
     </button>
     <div id="videoPlayback" class="flexRow">
-        <p>{frame}</p>
-        <input type="range" min="0" max="123" bind:value={frame} />
-        <p>123</p>
+        {#if isVideo}
+            <p>{currentFrame + 1}</p>
+            <input disabled type="range" min="0" max={totalVideoFrames - 1} bind:value={currentFrame} />
+            <p>{totalVideoFrames}</p>
+        {:else}
+            <p class="disabled-text">No video loaded</p>
+        {/if}
     </div>
     <div id="saveSection" class="flexRowSpaceBetween">
         <div class="flexRow">
@@ -476,4 +585,27 @@ img{
     50%  { border-color: var(--white); }
     100% { border-color: var(--white3); }
 }
+
+.processing-status {
+    margin-top: 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.processing-status p {
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.processing-status progress {
+    width: 100%;
+    height: 1.5em;
+}
+
+.disabled-text {
+    color: var(--white2);
+    opacity: 0.5;
+}
 </style>
+
