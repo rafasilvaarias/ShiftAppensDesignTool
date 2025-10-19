@@ -5,6 +5,7 @@
     import downloadIcon from '$lib/assets/icons/download.svg';
     import fileDownloadIcon from '$lib/assets/icons/fileDownload.svg';
     import { videoProcessor } from '$lib/videoProcessor.js';
+    import { videoExporter } from '$lib/videoExporter.js';
 
     let reloadCount = $state(0);
 
@@ -63,13 +64,32 @@
 
     let exportFormat = $state("png");
 
-    let settings = $derived({gridSize, colorSteps, minColorValue, maxColorValue, textSymbols, canvasWidth, canvasHeight, asciiOffset, blurValue, asciiSteps, clusterCount, mediaPath: currentFrameUrl, colors, activeLayers: {...activeLayers}, asciiMode, currentFrame, exportFormat});
+    let settings = $derived({
+        gridSize,
+        colorSteps,
+        minColorValue,
+        maxColorValue,
+        textSymbols,
+        canvasWidth,
+        canvasHeight,
+        asciiOffset,
+        blurValue,
+        asciiSteps,
+        clusterCount,
+        mediaPath: currentFrameUrl,
+        colors,
+        activeLayers: { ...activeLayers },
+        asciiMode,
+        currentFrame,
+        exportFormat
+    });
 
     let save = $state({
         canvas: false,
         pixelLayer: false,
         clusterLayer: false,
-        asciiLayer: false
+        asciiLayer: false,
+        videoFrame: false
     });
 
     let update = $state({
@@ -79,6 +99,12 @@
         media: false,
         redraw: false
     });
+
+    // Video export state
+    let isExportingVideo = $state(false);
+    let videoExportProgress = $state(0);
+    let videoExportCurrentFrame = $state(0);
+    let frameReadyToCapture = $state(false);
 
     $effect(() => {
         colors;
@@ -210,6 +236,7 @@
                 
                 // Only increment reloadCount after video is fully processed
                 reloadCount++;
+                update.layers = true;
                 
             } catch (error) {
                 console.error('Error processing video:', error);
@@ -235,10 +262,76 @@
         }
     });
 
+    // Video export logic
+    async function saveVideo() {
+        if (!isVideo || videoFrames.length === 0) {
+            alert('No video loaded to export');
+            return;
+        }
+
+        isExportingVideo = true;
+        videoExportProgress = 0;
+        videoExportCurrentFrame = 0;
+        frameReadyToCapture = false;
+
+        // Setup progress callback
+        videoExporter.onProgress((current, total, progress) => {
+            videoExportProgress = progress;
+        });
+
+        // Setup completion callback
+        videoExporter.onComplete(() => {
+            isExportingVideo = false;
+            videoExportProgress = 0;
+            videoExportCurrentFrame = 0;
+            frameReadyToCapture = false;
+        });
+
+        // Setup frame captured callback - this handles advancing to next frame
+        videoExporter.onFrameCaptured((hasMore) => {
+            if (hasMore) {
+                // Move to next frame
+                videoExportCurrentFrame++;
+                currentFrame = videoExportCurrentFrame;
+                update.media = true;
+                frameReadyToCapture = false;
+            } else {
+                // All frames captured, finalize
+                videoExporter.finishExport();
+            }
+        });
+
+        // Start the export
+        videoExporter.startExport(totalVideoFrames - 1, exportFormat);
+        
+        // Set first frame (start from 1, not 0)
+        currentFrame = 1;
+        videoExportCurrentFrame = 1;
+        update.media = true;
+    }
+
+    // Watch for when frame is ready to capture
+    $effect(() => {
+        if (isExportingVideo && update.layers === false && !frameReadyToCapture) {
+            // Mark frame as ready
+            frameReadyToCapture = true;
+        }
+    });
+
+    // Trigger capture when frame is ready
+    $effect(() => {
+        if (frameReadyToCapture && isExportingVideo) {
+            save.videoFrame = true;
+        }
+    });
+
+    // Update current frame when frame slider changes
     $effect(() => {
         currentFrame;
         return() => {
-            update.media = true;
+            if (!isExportingVideo) {
+                update.media = true;
+            }
         }
     });
 
@@ -257,6 +350,14 @@
                     <div class="processing-status">
                         <p>Processing video... {videoProcessingProgress}%</p>
                         <progress value={videoProcessingProgress} max="100"></progress>
+                    </div>
+                {/if}
+                {#if isExportingVideo}
+                    <div class="processing-status">
+                        <p>Exporting video frames... {videoExportProgress}%</p>
+                        <progress value={videoExportProgress} max="100"></progress>
+                        <p>Frame {videoExportCurrentFrame + 1} of {totalVideoFrames}</p>
+                        <p style="font-size: 0.9em; opacity: 0.8;">Files exported in batches of 50 frames</p>
                     </div>
                 {/if}
             </div>
@@ -425,7 +526,7 @@
     <div id="videoPlayback" class="flexRow">
         {#if isVideo}
             <p>{currentFrame + 1}</p>
-            <input type="range" min="0" max={totalVideoFrames - 1} bind:value={currentFrame} />
+            <input type="range" min="0" max={totalVideoFrames - 1} bind:value={currentFrame} disabled={isExportingVideo} />
             <p>{totalVideoFrames}</p>
         {:else}
             <p class="disabled-text">No video loaded</p>
@@ -440,12 +541,12 @@
             </select>
         </div>
         <div class="flexRow"> 
-            <button id="saveCanvas" class="iconButton" onclick={() => save.canvas = true}>
+            <button id="saveCanvas" class="iconButton" onclick={() => save.canvas = true} disabled={isExportingVideo}>
                 <img src={fileDownloadIcon} alt="Download"/>
             </button>
             {#if isVideo}
-                <button id="saveVideo" class="iconButton" onclick={saveVideo()}>
-                    <img src={fileDownloadIcon} alt="Download"/>
+                <button id="saveVideo" class="iconButton" onclick={saveVideo} disabled={isExportingVideo} title="Export all frames as ZIP">
+                    <img src={downloadIcon} alt="Download All"/>
                 </button>
             {/if}
         </div>

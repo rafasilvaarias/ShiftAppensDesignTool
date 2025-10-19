@@ -1,6 +1,7 @@
 <script>
   import P5 from "@macfja/svelte-p5"
   import rough from 'roughjs';
+  import { videoExporter } from '$lib/videoExporter.js';
   import {
     processImage,
     changeImage,
@@ -88,8 +89,30 @@ let sketch = {
     }
 
     if(save.asciiLayer===true){
-      layers.ascii.save("asciiLayer_"+settings.frameCount+"."+settings.exportFormat);
+      layers.ascii.save("asciiLayer_"+settings.currentFrame+"."+settings.exportFormat);
       save.asciiLayer=false;
+    }
+
+    // Video frame export
+    if(save.videoFrame===true){
+      // Reset flag immediately to prevent re-entry
+      save.videoFrame = false;
+      
+      // Create a temporary canvas with exact dimensions to avoid scaling issues
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = settings.canvasWidth;
+      tempCanvas.height = settings.canvasHeight;
+      const ctx = tempCanvas.getContext('2d');
+      
+      // Draw the p5 canvas at exact size
+      ctx.drawImage(p5.canvas, 0, 0, settings.canvasWidth, settings.canvasHeight);
+      
+      // Capture as blob and add to ZIP
+      tempCanvas.toBlob((blob) => {
+        videoExporter.addFrame(blob);
+      }, `image/${settings.exportFormat}`);
+      
+      return; // Don't process other updates while exporting
     }
 
     // Updating
