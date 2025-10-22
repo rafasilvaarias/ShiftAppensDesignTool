@@ -18,7 +18,7 @@ export function drawAsciiLayer(p5, layers, pixel, xGrid, yGrid, colors, settings
   // Draw ASCII elements to the sharp canvas
   for (let iX = 0; iX < xGrid; iX++) {
     for (let iY = 0; iY <= yGrid; iY++) {
-      if (pixel[iX][iY]) {
+      if (pixel[iX][iY] && pixel[iX][iY].symbolIndex !== null) {
         let x = iX * settings.gridSize;
         let y = iY * settings.gridSize;
 

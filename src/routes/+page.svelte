@@ -27,10 +27,10 @@
 
     let presetColors = [
         { darker: "#10400C", lighter: "#478530", ascii: "#9DD492", name: "Green" },
-        { darker: "#7B3100", lighter: "#CE5744", ascii: "#E6EB8E", name: "Orange" },
-        { darker: "#1D2399", lighter: "#4555CF", ascii: "#96C1F7", name: "Blue" },
-        { darker: "#761968", lighter: "#BA58A7", ascii: "#F69EE3", name: "Pink" },
-        { darker: "#404040", lighter: "#8B8B8B", ascii: "#F2F2F1", name: "Gray" },
+        { darker: "#5C2806", lighter: "#CE5744", ascii: "#E6EB8E", name: "Orange" },
+        { darker: "#1D2399", lighter: "#5F6EE1", ascii: "#96C1F7", name: "Blue" },
+        { darker: "#670F5A", lighter: "#BA58A7", ascii: "#F69EE3", name: "Pink" },
+        { darker: "#393939", lighter: "#818181", ascii: "#F2F2F1", name: "Gray" },
     ]
 
     let backgroundColor = $state(presetColors[2].darker);
@@ -43,12 +43,12 @@
     let asciiPreset = $state();
     
     let textSymbolsString = $state(" .;sf@");
-    let asciiOffsetQuotient = $state(5);
+    let asciiOffsetQuotient = $state(4);
 
-    let blurValue = $state(4);
+    let blurValue = $state(3);
     let minColorValue = $state(0);
     let maxColorValue = $state(255);
-    let colorSteps = $state(10);
+    let colorSteps = $state(12);
     let gridSize = $state(20);
     let canvasWidth = $derived(mediaSize[0]);
     let canvasHeight = $derived(mediaSize[1]);
@@ -57,7 +57,7 @@
     let asciiStep1 = $state(0);
     let asciiStep2 = $state(0.67);
     let asciiSteps = $derived([asciiStep1, asciiStep2]);
-    let clusterCount = $state(20);
+    let clusterCount = $state(24);
     let activeLayers = $state({ pixel: true, cluster: true, ascii: true, background: false });
 
     let asciiMode = $state();

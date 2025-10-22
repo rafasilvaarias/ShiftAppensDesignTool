@@ -15,16 +15,26 @@ export function processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY)
       let y = iY * settings.gridSize;
       let c = img.get(x + Math.floor(settings.gridSize / 2), y + Math.floor(settings.gridSize / 2));
 
-      if (p5.alpha(c) > 0 || p5.blue(c) + p5.green(c) + p5.red(c) > 0) {
+      // Perlin Noise and Ascii Offset (always generated)
+      let asciiOffset = {x: p5.random(-1,1), y: p5.random(-1,1)};
+      let perlinValue = p5.noise(iX * 0.3 + offX, iY * 0.05 + offY);
+
+      // Check if pixel is transparent or absolute black
+      if (p5.alpha(c) === 0 || (p5.blue(c) + p5.green(c) + p5.red(c) === 0)) {
+        // Create pixel with null visual properties but preserve offset values
+        pixel[iX][iY] = {
+          perlinValue: perlinValue,
+          colorIndex: null,
+          symbolIndex: null,
+          asciiOffset: asciiOffset,
+          grayScaleValue: null
+        };
+      } else {
         // Symbol and Color Index
         let grayScaleValue = Math.round((p5.red(c) + p5.green(c) + p5.blue(c)) / 3);
         let indexes = calculateIndexes(p5, grayScaleValue, 0, iX, iY, settings, offX, offY);
         let colorIndex = indexes.colorIndex;
         let symbolIndex = indexes.symbolIndex;
-
-        // Perlin Noise and Ascii Offset
-        let asciiOffset = {x: p5.random(-1,1), y: p5.random(-1,1)};
-        let perlinValue = p5.noise(iX * 0.3 + offX, iY * 0.05 + offY);
 
         pixel[iX][iY] = {
           perlinValue: perlinValue,
@@ -33,9 +43,6 @@ export function processImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY)
           asciiOffset: asciiOffset,
           grayScaleValue: grayScaleValue
         };
-
-      } else {
-        pixel[iX][iY] = null;
       }
 
     }
@@ -54,7 +61,21 @@ export function changeImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY) 
       let y = iY * settings.gridSize;
       let c = img.get(x + Math.floor(settings.gridSize / 2), y + Math.floor(settings.gridSize / 2));
 
-      if (p5.alpha(c) > 0 || p5.blue(c) + p5.green(c) + p5.red(c) > 0) {
+      // Preserve existing perlinValue and asciiOffset
+      let existingPerlinValue = pixel[iX][iY] ? pixel[iX][iY].perlinValue : p5.noise(iX * 0.3 + offX, iY * 0.05 + offY);
+      let existingAsciiOffset = pixel[iX][iY] ? pixel[iX][iY].asciiOffset : {x: p5.random(-1,1), y: p5.random(-1,1)};
+
+      // Check if pixel is transparent or absolute black
+      if (p5.alpha(c) === 0 || (p5.blue(c) + p5.green(c) + p5.red(c) === 0)) {
+        // Create pixel with null visual properties but preserve offset values
+        pixel[iX][iY] = {
+          colorIndex: null,
+          symbolIndex: null,
+          grayScaleValue: null,
+          perlinValue: existingPerlinValue,
+          asciiOffset: existingAsciiOffset
+        };
+      } else {
         // Symbol and Color Index
         let grayScaleValue = Math.round((p5.red(c) + p5.green(c) + p5.blue(c)) / 3);
         let indexes = calculateIndexes(p5, grayScaleValue, 0, iX, iY, settings, offX, offY);
@@ -65,12 +86,9 @@ export function changeImage(p5, img, pixel, xGrid, yGrid, settings, offX, offY) 
           colorIndex: colorIndex,
           symbolIndex: symbolIndex,
           grayScaleValue: grayScaleValue,
-          perlinValue: pixel[iX][iY].perlinValue,
-          asciiOffset: pixel[iX][iY].asciiOffset
+          perlinValue: existingPerlinValue,
+          asciiOffset: existingAsciiOffset
         };
-
-      } else {
-        pixel[iX][iY] = null;
       }
 
     }
@@ -105,7 +123,7 @@ function calculateIndexes(p5, grayScaleValue, colorIndex, iX, iY, settings, offX
 export function changeColorIndexes(p5, pixel, xGrid, yGrid, settings) {
   for (let iX = 0; iX < xGrid; iX++) {
     for (let iY = 0; iY <= yGrid; iY++) {
-      if (pixel[iX][iY]) {
+      if (pixel[iX][iY] && pixel[iX][iY].grayScaleValue !== null) {
         let grayScaleValue = pixel[iX][iY].grayScaleValue;
         let indexes = calculateIndexes(p5, grayScaleValue, pixel[iX][iY].colorIndex, iX, iY, settings);
         pixel[iX][iY].colorIndex = indexes.colorIndex;
@@ -119,7 +137,7 @@ export function changeSymbolIndexes(p5, pixel, xGrid, yGrid, settings, offX, off
   console.log('currentFrame' + settings.currentFrame);
   for (let iX = 0; iX < xGrid; iX++) {
     for (let iY = 0; iY <= yGrid; iY++) {
-      if (pixel[iX][iY]) {
+      if (pixel[iX][iY] && pixel[iX][iY].grayScaleValue !== null) {
         let grayScaleValue = pixel[iX][iY].grayScaleValue;
         let indexes = calculateIndexes(p5, grayScaleValue, pixel[iX][iY].colorIndex, iX, iY, settings, offX, offY);
         pixel[iX][iY].symbolIndex = indexes.symbolIndex;

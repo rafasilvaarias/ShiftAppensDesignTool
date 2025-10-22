@@ -100,9 +100,12 @@ export function drawClusterLayer(p5, layers, pixel, xGrid, yGrid, colors, settin
     const iY = Math.floor(point.y);
 
     if (!pixel[iX] || !pixel[iX][iY] || visited[iX][iY]) continue;
+    
+    // Skip pixels with null colorIndex (transparent/black)
+    if (pixel[iX][iY].colorIndex === null) continue;
 
     // Map 0–1 color value to color interval index
-    const targetColorIndex = pixel[iX][iY] ? Math.floor(pixel[iX][iY].colorIndex) : -1;
+    const targetColorIndex = Math.floor(pixel[iX][iY].colorIndex);
 
     const cluster = getCluster(pixel, iX, iY, targetColorIndex, visited, xGrid, yGrid);
     if (cluster.length === 0) continue;
