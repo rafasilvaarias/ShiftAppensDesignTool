@@ -53,7 +53,9 @@ export function drawAsciiLayer(p5, layers, pixel, xGrid, yGrid, colors, settings
   blurCanvas.filter(p5.BLUR, settings.blurValue);
   
   // Draw blurred version first (behind)
-  layers.ascii.image(blurCanvas, 0, 0);
+  if (settings.blurValue > 0){
+    layers.ascii.image(blurCanvas, 0, 0);
+  }
   
   // Draw sharp version on top
   layers.ascii.image(sharpCanvas, 0, 0);
